@@ -8,4 +8,4 @@ Wrapper for [Googler](https://github.com/jarun/googler), a command line tool for
 
 ## Usage
 
-Call `googler-search` and type in the interactive prompt to perform a search.
+Call `M-x googler-search` and type in the interactive prompt to perform a search.
