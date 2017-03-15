@@ -1,6 +1,6 @@
 # Googler Mode
 
-Wrapper for [Googler](https://github.com/jarun/googler), a command line tool for performing Google searches.
+Emacs wrapper for [Googler](https://github.com/jarun/googler), a command line tool for performing Google searches.
 
 ## Installation
 
