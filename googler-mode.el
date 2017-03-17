@@ -31,17 +31,22 @@
     (progn 
       (get-buffer-create "*googler-results*")
       (with-current-buffer "*googler-results*"
-	(progn
-	  (erase-buffer)
-	  (insert "Results for " query "\n\n")
-	  (render-all-entries results)
-	  (read-only-mode)
-	  (goto-char (point-min)))))
-      (switch-to-buffer "*googler-results*")))
+	(let ((buffer-read-only nil))
+	  (progn
+	    (erase-buffer)
+	    (insert "Results for " query "\n\n")
+	    (render-all-entries results)
+	    (read-only-mode)
+	    (goto-char (point-min)))))
+      (switch-to-buffer "*googler-results*"))))
 
 
-(defun googler-search ()
+(defun googler-search (&optional query)
   "Enter search term and display Googler results in a new buffer."
   (interactive)
   (googler-results-buffer
-   (read-from-minibuffer "Googler search: ")))
+   (if query
+       query
+     (read-from-minibuffer "Googler search: "))))
+
+
