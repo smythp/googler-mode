@@ -35,27 +35,29 @@
 
 (defun render-all-entries (vector offset)
   "Inserts text for results from VECTOR as a side effect. Returns the buffer locations of the beginning of each entry as a list so that user can move between them. Offset is used to shift results by the length of any preamble at the beginnig of buffer."
-
   (googler-cumulative-list
   ;; put offset at beginning of list with cons
   (cons offset
 	(seq-map 'render-search-entry vector)) 0))
 
 
-  (defun googler-results-buffer (query)
-    "Update the results buffer based on a QUERY."
-    (let ((results (googler-get-results query)))
-      (progn 
-	(get-buffer-create "*googler-results*")
-	(with-current-buffer "*googler-results*"
-	  (let ((buffer-read-only nil))
-	    (progn
-	      (erase-buffer)
-	      (insert "Results for " query "\n\n")
-	      (setq googler-results-locations (render-all-entries results (+ (length query) 15)))
-	      (read-only-mode)
-	      (goto-char (point-min)))))
-	(switch-to-buffer "*googler-results*"))))
+(defun googler-results-buffer (query)
+  "Update the results buffer based on a QUERY."
+  (let ((results (googler-get-results query)))
+    (progn 
+      (get-buffer-create "*googler-results*")
+      (with-current-buffer "*googler-results*"
+	(let ((buffer-read-only nil))
+	  (progn
+	    (erase-buffer)
+	    (insert "Results for " query "\n\n")
+	    (setq googler-results-locations (render-all-entries results (+ (length query) 15)))
+	    (googler-mode)
+	    (if googler-use-eww
+		(setq-local
+		 browse-url-browser-function 'eww-browse-url))
+	    (goto-char (car googler-results-locations)))))
+      (switch-to-buffer "*googler-results*"))))
 
 
 (defun googler-search (&optional query)
@@ -76,15 +78,6 @@
 		      googler-results-locations)))))
 
 
-(defun googler-next ()
-  "Move point to next result while on the Googler results page."
-  (interactive)
-  (goto-char
-   (car (delq nil
-	      (mapcar (lambda (x) (if (> (point) x) x))
-		      googler-results-locations)))))
-
-
 (defun googler-previous ()
   "Move point to next result while on the Googler results page."
   (interactive)
@@ -94,9 +87,16 @@
 		      googler-results-locations))))))
 
 
-;; (defun googler-move (&optional back)
-;;   "Move forward or back in the Googler results page. If optional BACK is non-nil, moves back, else moves forward."
-;;   (let ((valid-locations (delq nil (mapcar (lambda (x) (if (< (point) x) x)) googler-results-locations))))
-;;     (goto-char
-;;        (car valid-locations))))
-;; ;	 (car (last valid-locations))
+(define-derived-mode googler-mode special-mode "Googler"
+  "Mode for searching Google.
+   \\{googler-mode-map}")
+
+
+(define-key googler-mode-map
+  "n" 'googler-next)
+
+(define-key googler-mode-map
+  "p" 'googler-previous)
+
+(defcustom googler-use-eww nil
+  "If non-nil, googler-mode will use eww as the default web browser when opening links.")
