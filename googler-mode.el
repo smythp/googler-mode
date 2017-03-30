@@ -69,6 +69,12 @@
      (read-from-minibuffer "Googler search: "))))
 
 
+(defun googler-lucky (query)
+  "Return \"I'm feeling lucky\" search for QUERY."
+  (shell-command
+   (concat "googler --lucky " query)))
+
+
 (defun googler-next ()
   "Move point to next result while on the Googler results page."
   (interactive)
