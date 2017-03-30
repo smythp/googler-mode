@@ -10,7 +10,9 @@
   "Run search query with Googler and convert results from JSON to vector."
   (json-read-from-string
    (shell-command-to-string
-    (concat "googler --json -C " (googler-sanitize-string query)))))
+    (concat "googler --json -C "
+	    (if googler-number-results (format "-n %d " googler-number-results) "")
+	    (googler-sanitize-string query)))))
 
 
 (defun insert-hyperlink (link text)
@@ -110,6 +112,12 @@
 (define-key googler-mode-map
   "p" 'googler-previous)
 
+(define-key googler-mode-map
+  "g" 'googler-search)
+
 (defcustom googler-use-eww nil
   "If non-nil, googler-mode will use eww as the default web browser when opening links.")
 
+
+(defcustom googler-number-results nil
+    "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
