@@ -1,16 +1,16 @@
 (require 'button)
 
 
-(defun googler-quote-string (string)
+(defun googler-sanitize-string (string)
   "Put escaped quotes around STRING."
-  (concat "\"" string "\""))
+  (concat "\"" (shell-quote-argument string) "\""))
 
 
 (defun googler-get-results (query)
   "Run search query with Googler and convert results from JSON to vector."
   (json-read-from-string
    (shell-command-to-string
-    (concat "googler --json -C " (googler-quote-string query)))))
+    (concat "googler --json -C " (googler-sanitize-string query)))))
 
 
 (defun insert-hyperlink (link text)
@@ -53,17 +53,17 @@
     (progn 
       (get-buffer-create "*googler-results*")
       (with-current-buffer "*googler-results*"
-	(let ((buffer-read-only nil))
-	  (progn
+	(progn
+	  (let ((buffer-read-only nil))
 	    (erase-buffer)
 	    (insert "Results for " query "\n\n")
-	    (setq googler-results-locations (render-all-entries results (+ (length query) 15)))
+	    (setq googler-results-locations (render-all-entries results (+ (length query) 15))))
 	    (googler-mode)
 	    (if googler-use-eww
 		(setq-local
 		 browse-url-browser-function 'eww-browse-url))
 	    (goto-char (car googler-results-locations)))))
-      (switch-to-buffer "*googler-results*"))))
+      (switch-to-buffer "*googler-results*")))
 
 
 (defun googler-search (&optional query)
@@ -112,3 +112,4 @@
 
 (defcustom googler-use-eww nil
   "If non-nil, googler-mode will use eww as the default web browser when opening links.")
+
