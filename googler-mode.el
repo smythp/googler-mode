@@ -1,10 +1,16 @@
 (require 'button)
 
+
+(defun googler-quote-string (string)
+  "Put escaped quotes around STRING."
+  (concat "\"" string "\""))
+
+
 (defun googler-get-results (query)
   "Run search query with Googler and convert results from JSON to vector."
   (json-read-from-string
    (shell-command-to-string
-    (concat "googler --json -C " query))))
+    (concat "googler --json -C " (googler-quote-string query)))))
 
 
 (defun insert-hyperlink (link text)
