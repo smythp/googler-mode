@@ -1,6 +1,5 @@
 (require 'button)
 
-
 (defun googler-sanitize-string (string)
   "Put escaped quotes around STRING."
   (concat "\"" (shell-quote-argument string) "\""))
@@ -105,10 +104,38 @@
 		      googler-results-locations))))))
 
 
+(defun googler-get-first-result (query)
+  (let* ((results (googler-get-results query 2)))
+    (elt results 0)))
+
+
+(defun googler-get-first-result-url (query)
+  (let ((result (googler-get-first-result query)))
+    (cdr (assoc 'url result))))
+
+
+(defun googler-org-link-gen (link-text)
+  "Create an orgmode-formatted link populated by LINK-TEXT and the first result of a Google search for that text."
+  (concat "[[" (googler-get-first-result-url link-text) "][" link-text "]]"))
+
+
+(defun googler-org-link ()
+  (interactive)
+  (if (use-region-p)
+      (let ((begin (region-beginning))
+	    (end (region-end)))
+      (save-excursion
+	(let ((link (googler-org-link-gen (buffer-substring (region-beginning) (region-end)))))
+	  ;; (goto-char begin)
+	;; (delete-region (region-beginning) (region-end))))
+	  (delete-region begin end)
+	  (insert link))))
+    (insert (googler-org-link-gen (read-from-minibuffer "Generate link from text: ")))))
+
+
 (define-derived-mode googler-mode special-mode "Googler"
   "Mode for searching Google.
    \\{googler-mode-map}")
-
 
 (define-key googler-mode-map
   "n" 'googler-next)
@@ -125,15 +152,5 @@
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
-
-
-(defun googler-get-first-result (query)
-  (let* ((results (googler-get-results query 2)))
-    (elt results 0)))
-
-
-(defun googler-get-first-result-url (query)
-  (let ((result (googler-get-first-result query)))
-    (cdr (assoc 'url result))))
 
 
