@@ -127,13 +127,13 @@
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
 
 
-(defun googler-get-first-result (url)
-  (let* ((results (googler-get-results url 2)))
-    (if (= (length results) 1)n
-	results
-      (elt results 1))))
+(defun googler-get-first-result (query)
+  (let* ((results (googler-get-results query 2)))
+    (elt results 0)))
 
 
 (defun googler-get-first-result-url (query)
   (let ((result (googler-get-first-result query)))
     (cdr (assoc 'url result))))
+
+
