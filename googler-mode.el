@@ -6,13 +6,17 @@
   (concat "\"" (shell-quote-argument string) "\""))
 
 
-(defun googler-get-results (query)
+(defun googler-get-results (query &optional results-number)
+  (let ((googler-number-results (cond (results-number results-number)
+				      (googler-number-results googler-number-results)
+				      (t 10))))
+				  
   "Run search query with Googler and convert results from JSON to vector."
   (json-read-from-string
    (shell-command-to-string
     (concat "googler --json -C "
 	    (if googler-number-results (format "-n %d " googler-number-results) "")
-	    (googler-sanitize-string query)))))
+	    (googler-sanitize-string query))))))
 
 
 (defun insert-hyperlink (link text)
@@ -121,3 +125,15 @@
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
+
+
+(defun googler-get-first-result (url)
+  (let* ((results (googler-get-results url 2)))
+    (if (= (length results) 1)n
+	results
+      (elt results 1))))
+
+
+(defun googler-get-first-result-url (query)
+  (let ((result (googler-get-first-result query)))
+    (cdr (assoc 'url result))))
