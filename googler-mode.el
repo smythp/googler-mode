@@ -145,6 +145,7 @@
 (define-key googler-mode-map
   "p" 'googler-previous)
 
+
 (define-key googler-mode-map
   "g" 'googler-search)
 
@@ -159,11 +160,30 @@
 (defun googler-self-insert-command (N)
   "Custom keypress handler for Googler mode."
   (interactive "p")
-  (if (and (>= (point) (car googler-query-locations)) (<= (point) (cdr googler-query-locations)))
+  (if (googler-edit-allowed-p)
       (let ((buffer-read-only nil))
 	(progn
 	  (googler-shift-offset 1)
 	  (self-insert-command N)))))
+
+
+(defun googler-key-backspace (&optional arg)
+  "Backspaces in googler-mode if in area that allows it."
+  (interactive "p")
+  (let ((num-chars  (if arg arg 1)))
+    (if (googler-edit-allowed-p)
+	(let ((buffer-read-only nil))
+	  (progn
+	    (googler-shift-offset 1 t)
+	    (backward-delete-char-untabify num-chars))))))
+
+
+  (defun googler-edit-allowed-p ()
+    "Checks if editing is allowed at point in googler-mode buffer."
+    (if (and (>= (point) (car googler-query-locations)) (<= (point) (cdr googler-query-locations)))
+	t))
+
+  
     
 
 
@@ -179,3 +199,7 @@
 
 
 (define-key googler-mode-map [remap self-insert-command] 'googler-self-insert-command)
+
+
+(define-key googler-mode-map
+  "DEL" 'googler-key-backspace)
