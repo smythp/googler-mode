@@ -62,6 +62,7 @@
 	  (let ((buffer-read-only nil))
 	    (erase-buffer)
 	    (insert "Results for " query "\n\n")
+	    (setq googler-query-locations (cons 13 (+ 13 (length query))))
 	    (setq googler-results-locations (render-all-entries results (+ (length query) 15))))
 	    (googler-mode)
 	    (if googler-use-eww
@@ -153,3 +154,28 @@
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
+
+
+(defun googler-self-insert-command (N)
+  "Custom keypress handler for Googler mode."
+  (interactive "p")
+  (if (and (>= (point) (car googler-query-locations)) (<= (point) (cdr googler-query-locations)))
+      (let ((buffer-read-only nil))
+	(progn
+	  (googler-shift-offset 1)
+	  (self-insert-command N)))))
+    
+
+
+(defun googler-shift-offset (num-characters &optional decrement)
+  "Increase or decrease the locations for key points in the *googler-results* buffer by NUM-CHARACTERS. Used when inserting text into the buffer after its creation. Increments the buffer by default, decrements the buffer if DECREMENT is non-nil."
+  (let ((plus-or-minus (if (not decrement)
+			   '+
+			 '-)))
+    (progn
+      (setq googler-results-locations (mapcar (lambda (x) (funcall plus-or-minus x num-characters)) googler-results-locations))
+      (setq googler-query-locations
+	    (cons (car googler-query-locations) (funcall plus-or-minus (cdr googler-query-locations) num-characters))))))
+
+
+(define-key googler-mode-map [remap self-insert-command] 'googler-self-insert-command)
