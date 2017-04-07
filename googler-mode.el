@@ -183,9 +183,6 @@
     (if (and (>= (point) (car googler-query-locations)) (<= (point) (cdr googler-query-locations)))
 	t))
 
-  
-    
-
 
 (defun googler-shift-offset (num-characters &optional decrement)
   "Increase or decrease the locations for key points in the *googler-results* buffer by NUM-CHARACTERS. Used when inserting text into the buffer after its creation. Increments the buffer by default, decrements the buffer if DECREMENT is non-nil."
@@ -194,8 +191,8 @@
 			 '-)))
     (progn
       (setq googler-results-locations (mapcar (lambda (x) (funcall plus-or-minus x num-characters)) googler-results-locations))
-      (setq googler-query-locations
-	    (cons (car googler-query-locations) (funcall plus-or-minus (cdr googler-query-locations) num-characters))))))
+	  (setq googler-query-locations
+		(cons (car googler-query-locations) (funcall plus-or-minus (cdr googler-query-locations) num-characters))))))
 
 
 (define-key googler-mode-map [remap self-insert-command] 'googler-self-insert-command)
