@@ -71,13 +71,14 @@
       (switch-to-buffer "*googler-results*")))
 
 
-(defun googler-search (&optional query)
+(defun googler-search (begin end)
   "Enter search term and display Googler results in a new buffer."
-  (interactive)
-  (googler-results-buffer
-   (if query
-       query
-     (read-from-minibuffer "Googler search: "))))
+  (interactive "rP")
+  (let ((googler-number-results (if current-prefix-arg current-prefix-arg googler-number-results)))
+    (googler-results-buffer
+     (if (use-region-p)
+	 (buffer-substring begin end)
+       (read-from-minibuffer "Googler search: ")))))
 
 
 (defun googler-lucky (query)
@@ -152,5 +153,3 @@
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
-
-
