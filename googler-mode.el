@@ -64,7 +64,8 @@
 	    (insert "Results for " query "\n\n")
 	    (setq googler-query-locations (cons 13 (+ 13 (length query))))
 	    (setq googler-results-locations (render-all-entries results (+ (length query) 15))))
-	    (googler-mode)
+	  (googler-mode)
+	  (googler-update-readable-map)
 	    (if googler-use-eww
 		(setq-local
 		 browse-url-browser-function 'eww-browse-url))
@@ -171,7 +172,7 @@
   "Backspaces in googler-mode if in area that allows it."
   (interactive "p")
   (let ((num-chars  (if arg arg 1)))
-    (if (googler-edit-allowed-p)
+    (if (and (googler-edit-allowed-p) (> (point) (car googler-query-locations)))
 	(let ((buffer-read-only nil))
 	  (progn
 	    (googler-shift-offset 1 t)
@@ -207,3 +208,11 @@
   "DEL" 'googler-key-backspace)
 
 
+(defvar googler-alternate-keymap-editable-area
+  		       '(keymap (keymap (127 . googler-key-backspace) (68 keymap (69 keymap (76 . googler-key-backspace))) (remap keymap (scroll-down-command . backward-delete-char-untabify) (self-insert-command . googler-self-insert-command)) (103 . self-insert-command) (112 . self-insert-command) (110 . self-insert-command) keymap (103 . self-insert-command) (60 . beginning-of-buffer) (62 . end-of-buffer) (104 . self-insert-command))))
+
+
+(defun googler-update-readable-map ()
+  (let ((buffer-read-only nil))
+    (add-text-properties (1- (car googler-query-locations)) (cdr googler-query-locations)
+		       (list 'keymap googler-alternate-keymap-editable-area))))
