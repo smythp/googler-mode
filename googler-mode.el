@@ -198,5 +198,12 @@
 (define-key googler-mode-map [remap self-insert-command] 'googler-self-insert-command)
 
 
+(define-key googler-mode-map [remap scroll-down-command] 'backward-delete-char-untabify)
+
+
+(define-key googler-mode-map (kbd "DEL") 'googler-key-backspace)
+
 (define-key googler-mode-map
   "DEL" 'googler-key-backspace)
+
+
