@@ -68,7 +68,7 @@ creates a list of title locations."
 	  (erase-buffer)
 	  (insert preamble)
 	  (mapcar 'googler-render-entry built-list)
-	  (setq googler-query-locations (googler-entity-list built-list 'title-start))
+	  (setq googler-entries-list built-list)
 	  (setq googler-results-locations (mapcar 'car (googler-entity-list built-list 'location-range)))
 	  (googler-mode)
 	  (goto-char (car (cdr (assoc 'location-range (car built-list)))))
@@ -91,6 +91,26 @@ creates a list of title locations."
    (concat "googler --lucky " query)))
 
 
+(defun googler-between-p (value cons-cell)
+  "Return true if VALUE is between or equal to the values in CONS-CELL."
+  (let ((minimum (min (car cons-cell) (cdr cons-cell)))
+	(maximum (max (car cons-cell) (cdr cons-cell))))
+    (if (and (<= minimum value) (<= value maximum))
+	t)))
+
+
+(defun googler-open-result ()
+  (interactive)
+  (if (equal (buffer-name) "*googler-results*")
+      (mapcar (lambda (entry)
+		(let ((range (cdr (assoc 'location-range entry)))
+		      (url (cdr (assoc 'url entry))))
+		  (if (googler-between-p (point) range)
+		      (browse-url url))))
+	      googler-entries-list)))
+			     
+
+      
 (defun googler-next ()
   "Move point to next result while on the Googler results page."
   (interactive)
@@ -141,6 +161,9 @@ creates a list of title locations."
 (define-derived-mode googler-mode special-mode "Googler"
   "Mode for searching Google.
    \\{googler-mode-map}")
+
+(define-key googler-mode-map
+  (kbd "RET") 'googler-open-result)
 
 (define-key googler-mode-map
   "n" 'googler-next)
