@@ -66,11 +66,11 @@
 	    (setq googler-results-locations (render-all-entries results (+ (length query) 15))))
 	  (googler-mode)
 	  (googler-update-readable-map)
-	    (if googler-use-eww
-		(setq-local
-		 browse-url-browser-function 'eww-browse-url))
-	    (goto-char (car googler-results-locations)))))
-      (switch-to-buffer "*googler-results*")))
+	  (if googler-use-eww
+	      (setq-local
+	       browse-url-browser-function 'eww-browse-url))
+	  (goto-char (car googler-results-locations)))))
+    (switch-to-buffer "*googler-results*")))
 
 
 (defun googler-search (begin end)
@@ -201,6 +201,8 @@
 
 (define-key googler-mode-map [remap scroll-down-command] 'backward-delete-char-untabify)
 
+(define-key googler-mode-map [remap scroll-up-command] 'googler-self-insert-command)
+
 
 (define-key googler-mode-map (kbd "DEL") 'googler-key-backspace)
 
@@ -214,5 +216,5 @@
 
 (defun googler-update-readable-map ()
   (let ((buffer-read-only nil))
-    (add-text-properties (1- (car googler-query-locations)) (cdr googler-query-locations)
-		       (list 'keymap googler-alternate-keymap-editable-area))))
+    (add-text-properties (1- (car googler-query-locations)) (1+ (cdr googler-query-locations))
+		       (list 'field t 'inhibit-read-only t 'keymap googler-alternate-keymap-editable-area))))
