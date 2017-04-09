@@ -1,16 +1,13 @@
-(require 'button)
-
 (defun googler-sanitize-string (string)
   "Put escaped quotes around STRING."
   (concat "\"" (shell-quote-argument string) "\""))
 
 
 (defun googler-get-results (query &optional results-number)
+  "Run search query with Googler and convert results from JSON to vector."
   (let ((googler-number-results (cond (results-number results-number)
 				      (googler-number-results googler-number-results)
 				      (t 10))))
-				  
-  "Run search query with Googler and convert results from JSON to vector."
   (json-read-from-string
    (shell-command-to-string
     (concat "googler --json -C "
@@ -18,68 +15,73 @@
 	    (googler-sanitize-string query))))))
 
 
-(defun insert-hyperlink (link text)
-  (insert-button text
-		 'action (lambda (x) (browse-url (button-get x 'url)))
-		 'url link))
-
-
-(defun render-search-entry (search-entry)
-  (let ((title (cdr (assoc 'title search-entry)))
+(defun googler-build-search-entry (search-entry &optional begin-location)
+  (let* ((title (cdr (assoc 'title search-entry)))
 	(url (cdr (assoc 'url search-entry)))
-	(abstract (cdr (assoc 'abstract search-entry))))
-    (progn 
-      (insert-hyperlink url title)
-      (insert "\n\n" abstract "\n\n")
-      ;; return position shift after insert
-      ;; for user ability to move between results
-      (+ (length title) (length abstract) 4))))
+	(abstract (cdr (assoc 'abstract search-entry)))
+	(begin-location (if begin-location begin-location 0))
+	(end-location (+ begin-location (length title) 2 (length abstract))))
+    `((title . ,title)
+      (url . ,url)
+      (description . ,abstract)
+      (title-start . ,begin-location)
+      (title-end . ,(+ begin-location (length title)))
+      (description-start . ,(+ begin-location (length title) 2))
+      (description-end . ,end-location)
+      (location-range . ,(cons begin-location end-location)))))
 
 
-(defun googler-cumulative-list (in-list carry)
-  "Make each value of IN-LIST the cumulative total of that value and all previous values."
-  (if in-list
-       (cons
-	(+ (car in-list) carry)
-	(googler-cumulative-list (cdr in-list) (+ carry (car in-list))))))
+(defun googler-cumulative-build (results &optional carry)
+  "Build lists of entry data based on RESULTS and bind global variables for navigation. CARRY is the starting point and can be used as offset for text at the beginning of the buffer before results."
+  (if (eq results [])
+      nil
+    (let* ((built-list (googler-build-search-entry (elt results 0) carry))
+	   (begin-location (+ 2(cdr (cdr (assoc 'location-range built-list))))))
+      ;; end-location)))
+      (cons built-list (googler-cumulative-build (seq-drop results 1) begin-location)))))
 
 
-(defun render-all-entries (vector offset)
-  "Inserts text for results from VECTOR as a side effect. Returns the buffer locations of the beginning of each entry as a list so that user can move between them. Offset is used to shift results by the length of any preamble at the beginnig of buffer."
-  (googler-cumulative-list
-  ;; put offset at beginning of list with cons
-  (cons offset
-	(seq-map 'render-search-entry vector)) 0))
+(defun googler-entity-list (entry-list assoc-symbol)
+  "Takes built list of results as ENTRY-LIST and creates list based on an association with ASSOC-SYMBOL.
+
+For example, 
+
+(googler-build-navigation-locations entry-list 'title-start) 
+
+creates a list of title locations."
+  (mapcar (lambda (x) (cdr (assoc assoc-symbol x))) entry-list))
+
+
+(defun googler-render-entry (entry)
+  "Uses an ENTRY from the built list of results to insert text into a buffer in the correct format."
+  (insert (cdr (assoc 'title entry)) "\n\n" (cdr (assoc 'description entry)) "\n\n"))
 
 
 (defun googler-results-buffer (query)
   "Update the results buffer based on a QUERY."
-  (let ((results (googler-get-results query)))
-    (progn 
-      (get-buffer-create "*googler-results*")
-      (with-current-buffer "*googler-results*"
-	(progn
-	  (let ((buffer-read-only nil))
-	    (erase-buffer)
-	    (insert "Results for " query "\n\n")
-	    (setq googler-query-locations (cons 13 (+ 13 (length query))))
-	    (setq googler-results-locations (render-all-entries results (+ (length query) 15))))
+  (let* ((preamble (concat "Results for: " query "\n\n"))
+	 (built-list (googler-cumulative-build (googler-get-results query) (1+ (length preamble))))
+	 (buffer (get-buffer-create "*googler-results*")))
+    (with-current-buffer buffer
+      (progn
+	(let ((buffer-read-only nil))
+	  (erase-buffer)
+	  (insert preamble)
+	  (mapcar 'googler-render-entry built-list)
+	  (setq googler-query-locations (googler-entity-list built-list 'title-start))
+	  (setq googler-results-locations (mapcar 'car (googler-entity-list built-list 'location-range)))
 	  (googler-mode)
-	  (googler-update-readable-map)
-	  (if googler-use-eww
-	      (setq-local
-	       browse-url-browser-function 'eww-browse-url))
-	  (goto-char (car googler-results-locations)))))
-    (switch-to-buffer "*googler-results*")))
+	  (goto-char (car (cdr (assoc 'location-range (car built-list)))))
+	  (switch-to-buffer buffer))))))
 
 
-(defun googler-search (begin end)
+(defun googler-search (prefix)
   "Enter search term and display Googler results in a new buffer."
-  (interactive "rP")
+  (interactive "P")
   (let ((googler-number-results (if current-prefix-arg current-prefix-arg googler-number-results)))
     (googler-results-buffer
-     (if (use-region-p)
-	 (buffer-substring begin end)
+     (if (and (mark) (use-region-p))
+	 (buffer-substring (region-beginning) (region-end))
        (read-from-minibuffer "Googler search: ")))))
 
 
@@ -124,7 +126,7 @@
 
 (defun googler-org-link ()
   (interactive)
-  (if (use-region-p)
+  (if (and (mark) (use-region-p))
       (let ((begin (region-beginning))
 	    (end (region-end)))
       (save-excursion
@@ -156,65 +158,3 @@
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
-
-
-(defun googler-self-insert-command (N)
-  "Custom keypress handler for Googler mode."
-  (interactive "p")
-  (if (googler-edit-allowed-p)
-      (let ((buffer-read-only nil))
-	(progn
-	  (googler-shift-offset 1)
-	  (self-insert-command N)))))
-
-
-(defun googler-key-backspace (&optional arg)
-  "Backspaces in googler-mode if in area that allows it."
-  (interactive "p")
-  (let ((num-chars  (if arg arg 1)))
-    (if (and (googler-edit-allowed-p) (> (point) (car googler-query-locations)))
-	(let ((buffer-read-only nil))
-	  (progn
-	    (googler-shift-offset 1 t)
-	    (backward-delete-char-untabify num-chars))))))
-
-
-  (defun googler-edit-allowed-p ()
-    "Checks if editing is allowed at point in googler-mode buffer."
-    (if (and (>= (point) (car googler-query-locations)) (<= (point) (cdr googler-query-locations)))
-	t))
-
-
-(defun googler-shift-offset (num-characters &optional decrement)
-  "Increase or decrease the locations for key points in the *googler-results* buffer by NUM-CHARACTERS. Used when inserting text into the buffer after its creation. Increments the buffer by default, decrements the buffer if DECREMENT is non-nil."
-  (let ((plus-or-minus (if (not decrement)
-			   '+
-			 '-)))
-    (progn
-      (setq googler-results-locations (mapcar (lambda (x) (funcall plus-or-minus x num-characters)) googler-results-locations))
-	  (setq googler-query-locations
-		(cons (car googler-query-locations) (funcall plus-or-minus (cdr googler-query-locations) num-characters))))))
-
-
-(define-key googler-mode-map [remap self-insert-command] 'googler-self-insert-command)
-
-
-(define-key googler-mode-map [remap scroll-down-command] 'backward-delete-char-untabify)
-
-(define-key googler-mode-map [remap scroll-up-command] 'googler-self-insert-command)
-
-
-(define-key googler-mode-map (kbd "DEL") 'googler-key-backspace)
-
-(define-key googler-mode-map
-  "DEL" 'googler-key-backspace)
-
-
-(defvar googler-alternate-keymap-editable-area
-  		       '(keymap (keymap (127 . googler-key-backspace) (68 keymap (69 keymap (76 . googler-key-backspace))) (remap keymap (scroll-down-command . backward-delete-char-untabify) (self-insert-command . googler-self-insert-command)) (103 . self-insert-command) (112 . self-insert-command) (110 . self-insert-command) keymap (103 . self-insert-command) (60 . beginning-of-buffer) (62 . end-of-buffer) (104 . self-insert-command))))
-
-
-(defun googler-update-readable-map ()
-  (let ((buffer-read-only nil))
-    (add-text-properties (1- (car googler-query-locations)) (1+ (cdr googler-query-locations))
-		       (list 'field t 'inhibit-read-only t 'keymap googler-alternate-keymap-editable-area))))
