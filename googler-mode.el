@@ -114,19 +114,24 @@ creates a list of title locations."
 (defun googler-next ()
   "Move point to next result while on the Googler results page."
   (interactive)
-  (goto-char
-   (car (delq nil
-	      (mapcar (lambda (x) (if (< (point) x) x))
-		      googler-results-locations)))))
+  (let ((next-item (car (delq nil
+			      (mapcar (lambda (x) (if (< (point) x) x))
+				      googler-results-locations)))))
+    (if next-item
+	(goto-char next-item)
+      (message "Last search entry"))))
 
 
 (defun googler-previous ()
   "Move point to next result while on the Googler results page."
   (interactive)
-  (goto-char
+  (let ((previous-item 
    (car (last (delq nil
 	      (mapcar (lambda (x) (if (> (point) x) x))
 		      googler-results-locations))))))
+    (if previous-item
+	(goto-char previous-item)
+      (message "No previous search entry"))))
 
 
 (defun googler-get-first-result (query)
