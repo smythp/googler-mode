@@ -99,18 +99,23 @@ creates a list of title locations."
 	t)))
 
 
-(defun googler-open-result ()
+(defun googler-open-result (&optional use-eww)
   (interactive)
   (if (equal (buffer-name) "*googler-results*")
       (mapcar (lambda (entry)
 		(let ((range (cdr (assoc 'location-range entry)))
 		      (url (cdr (assoc 'url entry))))
 		  (if (googler-between-p (point) range)
-		      (browse-url url))))
+		      (if use-eww (eww-browse-url url) (browse-url url)))))
 	      googler-entries-list)))
-			     
 
-      
+
+(defun googler-open-result-eww ()
+  (interactive)
+  "Open link in eww."
+  (googler-open-result t))
+
+
 (defun googler-next ()
   "Move point to next result while on the Googler results page."
   (interactive)
@@ -169,6 +174,9 @@ creates a list of title locations."
 
 (define-key googler-mode-map
   (kbd "RET") 'googler-open-result)
+
+(define-key googler-mode-map
+  (kbd "<C-return>") 'googler-open-result-eww)
 
 (define-key googler-mode-map
   "n" 'googler-next)
