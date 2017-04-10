@@ -17,10 +17,11 @@
 
 (defun googler-build-search-entry (search-entry &optional begin-location)
   (let* ((title (cdr (assoc 'title search-entry)))
-	(url (cdr (assoc 'url search-entry)))
-	(abstract (cdr (assoc 'abstract search-entry)))
-	(begin-location (if begin-location begin-location 0))
-	(end-location (+ begin-location (length title) 2 (length abstract))))
+	 
+	 (url (cdr (assoc 'url search-entry)))
+	 (abstract (cdr (assoc 'abstract search-entry)))
+	 (begin-location (if begin-location begin-location 0))
+	 (end-location (+ begin-location (length title) 2 (length abstract))))
     `((title . ,title)
       (url . ,url)
       (description . ,abstract)
@@ -61,10 +62,12 @@ creates a list of title locations."
   "Update the results buffer based on a QUERY."
   (let* ((preamble (concat "Results for: " query "\n\n"))
 	 (built-list (googler-cumulative-build (googler-get-results query) (1+ (length preamble))))
-	 (buffer (get-buffer-create "*googler-results*")))
+	 (buffer (get-buffer-create "*googler-results*"))
+	 (origin-buffer (buffer-name)))
     (with-current-buffer buffer
       (progn
 	(let ((buffer-read-only nil))
+	  (setq googler-origin-buffer origin-buffer)
 	  (erase-buffer)
 	  (insert preamble)
 	  (mapcar 'googler-render-entry built-list)
@@ -99,15 +102,26 @@ creates a list of title locations."
 	t)))
 
 
+(defun googler-get-entry-at-point ()
+  "Get entry at point in Googler buffer."
+  (if (equal (buffer-name) "*googler-results*")
+      (car
+       (delq nil
+	     (mapcar (lambda (entry)
+		       (let ((range (cdr (assoc 'location-range entry))))
+			 (if (googler-between-p (point) range)
+			     entry)))
+		     googler-entries-list)))))
+  
+
+
 (defun googler-open-result (&optional use-eww)
   (interactive)
   (if (equal (buffer-name) "*googler-results*")
-      (mapcar (lambda (entry)
-		(let ((range (cdr (assoc 'location-range entry)))
-		      (url (cdr (assoc 'url entry))))
-		  (if (googler-between-p (point) range)
-		      (if use-eww (eww-browse-url url) (browse-url url)))))
-	      googler-entries-list)))
+      (let ((url (cdr (assoc 'url (googler-get-entry-at-point)))))
+	(if use-eww
+	    (eww-browse-url url)
+	  (browse-url url)))))
 
 
 (defun googler-open-result-eww ()
@@ -149,9 +163,35 @@ creates a list of title locations."
     (cdr (assoc 'url result))))
 
 
-(defun googler-org-link-gen (link-text)
-  "Create an orgmode-formatted link populated by LINK-TEXT and the first result of a Google search for that text."
-  (concat "[[" (googler-get-first-result-url link-text) "][" link-text "]]"))
+(defun googler-insert-link-of-type (type)
+  "Insert link of symbol TYPE into origin buffer."
+  (interactive)
+  (let* ((entry (googler-get-entry-at-point))
+	 (url (cdr (assoc 'url entry)))
+	 (title (cdr (assoc 'title entry))))
+    (progn
+      (switch-to-buffer googler-origin-buffer)
+      (cond ((equal type (or 'org 'orgmode)) (insert (concat "[[" url "][" title "]]")))
+	    ((equal type 'markdown) (insert (concat "[" title "](" url ")")))
+	    ((equal type 'html) (insert (concat "<a href=\"" url "\">" title "</a>")))))))
+
+
+(defun googler-insert-markdown-link ()
+  "Insert markdown link of entry at point into origin buffer."
+  (interactive)
+  (googler-insert-link-of-type 'markdown))
+
+
+(defun googler-insert-org-link ()
+  "Insert orgmode link of entry at point into origin buffer."
+  (interactive)
+  (googler-insert-link-of-type 'org))
+
+
+(defun googler-insert-html-link ()
+  "Insert HTML link of entry at point into origin buffer."
+  (interactive)
+  (googler-insert-link-of-type 'html))
 
 
 (defun googler-org-link ()
@@ -171,6 +211,19 @@ creates a list of title locations."
 (define-derived-mode googler-mode special-mode "Googler"
   "Mode for searching Google.
    \\{googler-mode-map}")
+
+(define-key googler-mode-map
+  (kbd "i i") 'googler-insert-link)
+
+(define-key googler-mode-map
+  (kbd "i o") 'googler-insert-org-link)
+
+(define-key googler-mode-map
+  (kbd "i m") 'googler-insert-markdown-link)
+
+(define-key googler-mode-map
+  (kbd "i h") 'googler-insert-html-link)
+
 
 (define-key googler-mode-map
   (kbd "RET") 'googler-open-result)
@@ -194,3 +247,6 @@ creates a list of title locations."
 
 (defcustom googler-number-results nil
     "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
+
+
+
