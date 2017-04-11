@@ -63,10 +63,14 @@ creates a list of title locations."
   (let* ((preamble (concat "Results for: " query "\n\n"))
 	 (built-list (googler-cumulative-build (googler-get-results query) (1+ (length preamble))))
 	 (buffer (get-buffer-create "*googler-results*"))
-	 (origin-buffer (buffer-name)))
+	 (origin-buffer (buffer-name))
+	 (origin-region (cons (region-beginning) (region-end)))
+	 (origin-region-active-p (region-active-p)))
     (with-current-buffer buffer
       (progn
 	(let ((buffer-read-only nil))
+	  (setq googler-origin-region-active-p origin-region-active-p)
+	  (setq googler-origin-region origin-region)
 	  (setq googler-origin-buffer origin-buffer)
 	  (erase-buffer)
 	  (insert preamble)
@@ -74,9 +78,8 @@ creates a list of title locations."
 	  (setq googler-entries-list built-list)
 	  (setq googler-results-locations (mapcar 'car (googler-entity-list built-list 'location-range)))
 	  (googler-mode)
-	  (print (car (cdr (assoc 'location-range (car built-list)))))
 	  (switch-to-buffer buffer)
-	  (goto-char (car (cdr (assoc 'location-range (car built-list))))))))))	  
+	  (goto-char (car (cdr (assoc 'location-range (car built-list))))))))))
 
 
 (defun googler-search (prefix)
@@ -169,10 +172,11 @@ creates a list of title locations."
   (interactive)
   (let* ((entry (googler-get-entry-at-point))
 	 (url (cdr (assoc 'url entry)))
-	 (title (cdr (assoc 'title entry)))
-	 (
+	 (title (cdr (assoc 'title entry))))
     (progn
       (switch-to-buffer googler-origin-buffer)
+      (if googler-origin-region-active-p
+	  (delete-region (car googler-origin-region) (cdr googler-origin-region)))
       (cond ((equal type (or 'org 'orgmode)) (insert (concat "[[" url "][" title "]]")))
 	    ((equal type 'markdown) (insert (concat "[" title "](" url ")")))
 	    ((equal type 'html) (insert (concat "<a href=\"" url "\">" title "</a>")))
@@ -208,7 +212,8 @@ creates a list of title locations."
   (interactive)
   (cond ((googler-origin-link-p 'html) (googler-insert-html-link))
 	((googler-origin-link-p 'org) (googler-insert-org-link))
-	((googler-origin-link-p 'markdown) (googler-insert-markdown-link))))
+	((googler-origin-link-p 'markdown) (googler-insert-markdown-link))
+	(t (googler-insert-title))))
 
 
 (defun googler-origin-link-p (link-type)
