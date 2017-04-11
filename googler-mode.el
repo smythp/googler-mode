@@ -64,8 +64,8 @@ creates a list of title locations."
 	 (built-list (googler-cumulative-build (googler-get-results query) (1+ (length preamble))))
 	 (buffer (get-buffer-create "*googler-results*"))
 	 (origin-buffer (buffer-name))
-	 (origin-region (cons (region-beginning) (region-end)))
-	 (origin-region-active-p (region-active-p)))
+	 (origin-region-active-p (region-active-p))	 
+	 (origin-region (if origin-region-active-p (cons (region-beginning) (region-end)))))
     (with-current-buffer buffer
       (progn
 	(let ((buffer-read-only nil))
@@ -167,10 +167,10 @@ creates a list of title locations."
     (cdr (assoc 'url result))))
 
 
-(defun googler-insert-link-of-type (type)
-  "Insert link of symbol TYPE into origin buffer."
+(defun googler-insert-link-of-type (type &optional in-entry)
+  "Insert link of symbol TYPE into origin buffer. If optional IN-ENTRY specified, use that entry instead of the entry at point."
   (interactive)
-  (let* ((entry (googler-get-entry-at-point))
+  (let* ((entry (if in-entry in-entry (googler-get-entry-at-point)))
 	 (url (cdr (assoc 'url entry)))
 	 (title (cdr (assoc 'title entry))))
     (progn
@@ -216,6 +216,34 @@ creates a list of title locations."
 	(t (googler-insert-title))))
 
 
+(defun googler-insert-all-org-link ()
+  "Insert orgmode link for all entries into origin buffer."
+  (interactive)
+  (mapcar (lambda (entry) (progn (googler-insert-link-of-type 'org entry) (insert "\n")))
+	  googler-entries-list))
+
+
+(defun googler-insert-all-markdown-link ()
+  "Insert markdown link for all entries into origin buffer."
+  (interactive)
+  (mapcar (lambda (entry) (progn (googler-insert-link-of-type 'markdown entry) (insert "  \n")))
+	  googler-entries-list))
+
+
+(defun googler-insert-all-html-link ()
+  "Insert HTML link for all entries into origin buffer."
+  (interactive)
+  (mapcar (lambda (entry) (progn (googler-insert-link-of-type 'html entry) (insert "<br>\n") (indent-for-tab-command)))
+	  googler-entries-list))
+
+
+(defun googler-insert-all-titles ()
+  "Insert titles for all entries into origin buffer."
+  (interactive)
+  (mapcar (lambda (entry) (progn (googler-insert-link-of-type 'title entry) (insert "\n")))
+	  googler-entries-list))
+
+
 (defun googler-origin-link-p (link-type)
   "Return true if MODE in the category for LINK-TYPE."
   (member (with-current-buffer googler-origin-buffer major-mode)
@@ -255,6 +283,17 @@ creates a list of title locations."
 (define-key googler-mode-map
   (kbd "i h") 'googler-insert-html-link)
 
+(define-key googler-mode-map
+  (kbd "i a o") 'googler-insert-all-org-link)
+
+(define-key googler-mode-map
+  (kbd "i a m") 'googler-insert-all-markdown-link)
+
+(define-key googler-mode-map
+  (kbd "i a h") 'googler-insert-all-html-link)
+
+(define-key googler-mode-map
+  (kbd "i a t") 'googler-insert-all-titles)
 
 (define-key googler-mode-map
   (kbd "RET") 'googler-open-result)
