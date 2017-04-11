@@ -168,12 +168,14 @@ creates a list of title locations."
   (interactive)
   (let* ((entry (googler-get-entry-at-point))
 	 (url (cdr (assoc 'url entry)))
-	 (title (cdr (assoc 'title entry))))
+	 (title (cdr (assoc 'title entry)))
+	 (
     (progn
       (switch-to-buffer googler-origin-buffer)
       (cond ((equal type (or 'org 'orgmode)) (insert (concat "[[" url "][" title "]]")))
 	    ((equal type 'markdown) (insert (concat "[" title "](" url ")")))
-	    ((equal type 'html) (insert (concat "<a href=\"" url "\">" title "</a>")))))))
+	    ((equal type 'html) (insert (concat "<a href=\"" url "\">" title "</a>")))
+	    ((equal type 'title) (insert title))))))
 
 
 (defun googler-insert-markdown-link ()
@@ -183,15 +185,35 @@ creates a list of title locations."
 
 
 (defun googler-insert-org-link ()
-  "Insert orgmode link of entry at point into origin buffer."
+  "Insert orgmode link for entry at point into origin buffer."
   (interactive)
   (googler-insert-link-of-type 'org))
 
 
 (defun googler-insert-html-link ()
-  "Insert HTML link of entry at point into origin buffer."
+  "Insert HTML link for entry at point into origin buffer."
   (interactive)
   (googler-insert-link-of-type 'html))
+
+
+(defun googler-insert-title ()
+  "Insert title for entry at point into origin buffer."
+  (interactive)
+  (googler-insert-link-of-type 'title))
+
+
+(defun googler-insert-link ()
+  "Insert link for entry at point into origin buffer based on the mode active in origin buffer."
+  (interactive)
+  (cond ((googler-origin-link-p 'html) (googler-insert-html-link))
+	((googler-origin-link-p 'org) (googler-insert-org-link))
+	((googler-origin-link-p 'markdown) (googler-insert-markdown-link))))
+
+
+(defun googler-origin-link-p (link-type)
+  "Return true if MODE in the category for LINK-TYPE."
+  (member (with-current-buffer googler-origin-buffer major-mode)
+	  (assoc link-type googler-mode-assoc)))
 
 
 (defun googler-org-link ()
@@ -214,6 +236,9 @@ creates a list of title locations."
 
 (define-key googler-mode-map
   (kbd "i i") 'googler-insert-link)
+
+(define-key googler-mode-map
+  (kbd "i t") 'googler-insert-title)
 
 (define-key googler-mode-map
   (kbd "i o") 'googler-insert-org-link)
@@ -246,7 +271,14 @@ creates a list of title locations."
 
 
 (defcustom googler-number-results nil
-    "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
+  "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
 
+(defcustom googler-default-link-insert-type 'html
+  "If mode is not successfully detected, insert this type of link.")
 
+(defvar googler-mode-assoc
+  '((html html-mode web-mode)
+    (markdown markdown-mode)
+    (org org-mode))
+  "Association list for functions that detect modes for their behavior.")
 
