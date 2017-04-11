@@ -74,8 +74,9 @@ creates a list of title locations."
 	  (setq googler-entries-list built-list)
 	  (setq googler-results-locations (mapcar 'car (googler-entity-list built-list 'location-range)))
 	  (googler-mode)
-	  (goto-char (car (cdr (assoc 'location-range (car built-list)))))
-	  (switch-to-buffer buffer))))))
+	  (print (car (cdr (assoc 'location-range (car built-list)))))
+	  (switch-to-buffer buffer)
+	  (goto-char (car (cdr (assoc 'location-range (car built-list))))))))))	  
 
 
 (defun googler-search (prefix)
