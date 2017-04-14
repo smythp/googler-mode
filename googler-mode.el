@@ -4,7 +4,7 @@
 
 
 (defun googler-get-results (query &optional results-number)
-  "Run search query with Googler and convert results from JSON to vector."
+  "Run search query with Googler and convert results from json to vector."
   (let ((googler-number-results (cond (results-number results-number)
 				      (googler-number-results googler-number-results)
 				      (t 10))))
@@ -93,7 +93,7 @@ creates a list of title locations."
 
 
 (defun googler-lucky (query)
-  "Return \"I'm feeling lucky\" search for QUERY."
+  "Open browser for \"I'm feeling lucky\" search for QUERY."
   (shell-command
    (concat "googler --lucky " query)))
 
@@ -130,7 +130,7 @@ creates a list of title locations."
 
 (defun googler-open-result-eww ()
   (interactive)
-  "Open link in eww."
+  "Open entry at point in eww."
   (googler-open-result t))
 
 
@@ -162,26 +162,49 @@ creates a list of title locations."
     (elt results 0)))
 
 
+(defun googler-autolink ()
+  "Replace text in buffer with working link based on the current mode."
+  (interactive)
+  (let* ((region-active (if (and (mark) (region-active-p)) t))
+	 (query (if region-active
+		   (buffer-substring (region-beginning) (region-end))
+		  (read-from-minibuffer "Insert link for search: ")))
+	 (first-result (googler-get-first-result query))
+	 (title query)
+	 (url (cdr (assoc 'url first-result))))
+    (progn
+      (if region-active (delete-region (region-beginning) (region-end)))
+      (insert
+       (cond ((googler-origin-link-p 'org t) (googler-generate-link 'org title url))
+	     ((googler-origin-link-p 'html t) (googler-generate-link 'html title url))
+	     ((googler-origin-link-p 'markdown t) (googler-generate-link 'markdown title url))
+	     (t (message "No appropriate link type found for buffer.")))))))
+
+
 (defun googler-get-first-result-url (query)
   (let ((result (googler-get-first-result query)))
     (cdr (assoc 'url result))))
 
 
-(defun googler-insert-link-of-type (type &optional in-entry)
-  "Insert link of symbol TYPE into origin buffer. If optional IN-ENTRY specified, use that entry instead of the entry at point."
+(defun googler-generate-link (type title url)
+  "Return link of TYPE with link title TITLE  and link url URL."
+  (cond ((equal type (or 'org 'orgmode)) (concat "[[" url "][" title "]]"))
+	((equal type 'markdown) (concat "[" title "](" url ")"))
+	((equal type 'html) (concat "<a href=\"" url "\">" title "</a>"))
+	((equal type 'title) title)))
+
+
+(defun googler-insert-link-of-type (type &optional in-entry current-buffer)
+  "Insert link of symbol TYPE into origin buffer. If optional IN-ENTRY specified, use that entry instead of the entry at point. If optional CURRENT-BUFFER specified, use current buffer instead of origin buffer."
   (interactive)
   (let* ((entry (if in-entry in-entry (googler-get-entry-at-point)))
 	 (url (cdr (assoc 'url entry)))
 	 (title (cdr (assoc 'title entry))))
     (progn
-      (switch-to-buffer googler-origin-buffer)
+      (if (not current-buffer) (switch-to-buffer googler-origin-buffer))
       (if googler-origin-region-active-p
 	  (delete-region (car googler-origin-region) (cdr googler-origin-region)))
-      (cond ((equal type (or 'org 'orgmode)) (insert (concat "[[" url "][" title "]]")))
-	    ((equal type 'markdown) (insert (concat "[" title "](" url ")")))
-	    ((equal type 'html) (insert (concat "<a href=\"" url "\">" title "</a>")))
-	    ((equal type 'title) (insert title))))))
-
+      (insert (googler-generate-link type title url)))))
 
 (defun googler-insert-markdown-link ()
   "Insert markdown link of entry at point into origin buffer."
@@ -244,9 +267,10 @@ creates a list of title locations."
 	  googler-entries-list))
 
 
-(defun googler-origin-link-p (link-type)
-  "Return true if MODE in the category for LINK-TYPE."
-  (member (with-current-buffer googler-origin-buffer major-mode)
+(defun googler-origin-link-p (link-type &optional current-as-origin-buffer)
+  "Return true if MODE in the category for LINK-TYPE. If CURRENT-AS-ORIGIN-BUFFER is non-nil, use current buffer instead of googler-origin-buffer."
+  
+  (member (if current-as-origin-buffer major-mode (with-current-buffer googler-origin-buffer major-mode))
 	  (assoc link-type googler-mode-assoc)))
 
 
@@ -326,4 +350,3 @@ creates a list of title locations."
     (markdown markdown-mode)
     (org org-mode))
   "Association list for functions that detect modes for their behavior.")
-
