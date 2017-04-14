@@ -350,3 +350,5 @@ creates a list of title locations."
     (markdown markdown-mode)
     (org org-mode))
   "Association list for functions that detect modes for their behavior.")
+
+(provide 'googler-mode)

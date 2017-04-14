@@ -4,7 +4,13 @@ Emacs wrapper for [Googler](https://github.com/jarun/googler), a command line to
 
 ## Installation
 
-[Install Googler](https://github.com/jarun/googler#installation) and make sure Emacs can access the "googler" command. Then add googler-mode.el to your load path.
+[Install Googler](https://github.com/jarun/googler#installation) and make sure Emacs can access the "googler" command. 
+
+Then add googler-mode.el to your load path and require it:
+
+    (add-to-list 'load-path "/path/to/containing/folder/")
+    (require 'googler-mode)
+
 
 ## Usage
 
