@@ -1,3 +1,30 @@
+(require 'json)
+
+(defgroup googler-mode nil
+  "Customization group for the googler-mode package for searching google and creating links."
+  :group 'communication)
+
+
+(defcustom googler-use-eww nil
+  "If non-nil, googler-mode will use eww as the default web browser when opening links.")
+
+
+(defcustom googler-number-results nil
+  "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
+
+
+(defcustom googler-title-font 'info-title-1
+  "Font face as symbol for title in results.")
+
+
+(defcustom googler-description-font nil
+  "Font face as symbol for description in results.")
+
+
+(defcustom googler-default-link-insert-type 'html
+  "If mode is not successfully detected, insert this type of link.")
+
+
 (defun googler-sanitize-string (string)
   "Put escaped quotes around STRING."
   (concat "\"" (shell-quote-argument string) "\""))
@@ -53,9 +80,21 @@ creates a list of title locations."
   (mapcar (lambda (x) (cdr (assoc assoc-symbol x))) entry-list))
 
 
-(defun googler-render-entry (entry)
+(defun googler-insert-fontified (string &optional font)
+  "Insert text STRING with optional font face FONT. If font not specified or nil, fall back to a normal insert."
+  (if font
+      (put-text-property 0 (length string) 'font-lock-face font
+			 string))
+  (insert string))
+
+
+(defun googler-render-entry (entry )
   "Uses an ENTRY from the built list of results to insert text into a buffer in the correct format."
-  (insert (cdr (assoc 'title entry)) "\n\n" (cdr (assoc 'description entry)) "\n\n"))
+  (progn
+    (googler-insert-fontified (cdr (assoc 'title entry)) googler-title-font)
+    (insert "\n\n")
+    (googler-insert-fontified  (cdr (assoc 'description entry)) googler-description-font)
+    (insert "\n\n")))
 
 
 (defun googler-results-buffer (query)
@@ -335,15 +374,7 @@ creates a list of title locations."
 (define-key googler-mode-map
   "g" 'googler-search)
 
-(defcustom googler-use-eww nil
-  "If non-nil, googler-mode will use eww as the default web browser when opening links.")
 
-
-(defcustom googler-number-results nil
-  "If non-nil, googler-mode will return 10 results on a search. Otherwise, will return the specified number.")
-
-(defcustom googler-default-link-insert-type 'html
-  "If mode is not successfully detected, insert this type of link.")
 
 (defvar googler-mode-assoc
   '((html html-mode web-mode)
