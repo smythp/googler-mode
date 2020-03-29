@@ -25,6 +25,33 @@
   "If mode is not successfully detected, insert this type of link.")
 
 
+
+
+(defun char-bracket-p (char)
+  "Check if a character in a sequence of characters is a square bracket."
+  (if (= char 91)
+      t))
+
+(elt "fart" 0)
+
+(defun find-first-bracket (string &optional iterator)
+  "Recur through a string and find the index of the first square bracket."
+  (if (> (1+ iterator) (length string))
+      nil
+    (let ((current-character (elt string iterator)))
+      (if (= current-character 91)
+	  iterator
+	(find-first-bracket string (1+ iterator))))))
+
+
+(defun remove-all-before-first-bracket (string)
+  "Remove all in STRING before first square bracket.
+
+       (let ((bracket-position (find-first-bracket string 0)))
+	 (if bracket-position
+	     (substring string bracket-position))))
+
+
 (defun googler-sanitize-string (string)
   "Put escaped quotes around STRING."
   (concat "\"" (shell-quote-argument string) "\""))
@@ -32,14 +59,21 @@
 
 (defun googler-get-results (query &optional results-number)
   "Run search query with Googler and convert results from json to vector."
-  (let ((googler-number-results (cond (results-number results-number)
+  (let* ((googler-number-results (cond (results-number results-number)
 				      (googler-number-results googler-number-results)
-				      (t 10))))
-  (json-read-from-string
-   (shell-command-to-string
-    (concat "googler --json -C "
-	    (if googler-number-results (format "-n %d " googler-number-results) "")
-	    (googler-sanitize-string query))))))
+				      (t 10)))
+	(googler-command-output    (shell-command-to-string
+				    (concat "googler --json -C "
+					    (if googler-number-results (format "-n %d " googler-number-results) "")
+					    (googler-sanitize-string query))))
+	;; If the search isn't exact there is a little message a at the beginning of the results
+	;; that isn't JSON. This removes it if it's there.
+	(cleaned-output (if (= (elt googler-command-output 0) 91)
+			    googler-command-output
+			  (remove-all-before-first-bracket googler-command-output))))
+    (json-read-from-string
+     cleaned-output)))
+
 
 
 (defun googler-build-search-entry (search-entry &optional begin-location)
