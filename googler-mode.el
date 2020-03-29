@@ -158,17 +158,21 @@ creates a list of title locations."
 (defun googler-search (prefix)
   "Enter search term and display Googler results in a new buffer."
   (interactive "P")
-  (let ((googler-number-results (if current-prefix-arg current-prefix-arg googler-number-results)))
-    (googler-results-buffer
-     (if (and (mark) (use-region-p))
-	 (buffer-substring (region-beginning) (region-end))
-       (read-from-minibuffer "Googler search: ")))))
+  (if (and prefix (= (car prefix) 4))
+      (googler-lucky (read-from-minibuffer "Googler lucky search: "))
+    (let ((googler-number-results (if current-prefix-arg current-prefix-arg googler-number-results)))
+      (googler-results-buffer
+       (if (and (mark) (use-region-p))
+	   (buffer-substring (region-beginning) (region-end))
+	 (read-from-minibuffer "Googler search: "))))))
 
 
 (defun googler-lucky (query)
-  "Open browser for \"I'm feeling lucky\" search for QUERY."
+  "Open browser for \"I'm feeling lucky\" and search for QUERY."
   (shell-command
    (concat "googler --lucky " query)))
+
+
 
 
 (defun googler-between-p (value cons-cell)
