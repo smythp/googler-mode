@@ -45,7 +45,7 @@
 
 
 (defun remove-all-before-first-bracket (string)
-  "Remove all in STRING before first square bracket.
+  "Remove all in STRING before first square bracket."
 
        (let ((bracket-position (find-first-bracket string 0)))
 	 (if bracket-position
